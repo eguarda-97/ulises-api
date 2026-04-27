@@ -1,0 +1,385 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Weather Report System</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
+
+  <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+
+  <style>
+    :root {
+      --bg-base:      #0a0c10;
+      --bg-surface:   #10141c;
+      --bg-card:      #141820;
+      --border:       rgba(255,255,255,0.07);
+      --border-glow:  rgba(56,189,248,0.25);
+      --accent-cyan:  #38bdf8;
+      --accent-amber: #fbbf24;
+      --text-primary: #e8eaf0;
+      --text-muted:   #6b7a99;
+      --text-dim:     #3a4460;
+      --font-mono:    'Space Mono', monospace;
+      --font-sans:    'DM Sans', sans-serif;
+      --radius:       12px;
+      --radius-sm:    8px;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg-base);
+      color: var(--text-primary);
+      font-family: var(--font-sans);
+      font-size: 15px;
+      line-height: 1.6;
+      min-height: 100vh;
+    }
+
+    /* Subtle grid texture on body */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(56,189,248,0.025) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(56,189,248,0.025) 1px, transparent 1px);
+      background-size: 40px 40px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .wrapper {
+      position: relative;
+      z-index: 1;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 2rem 1.5rem 4rem;
+    }
+
+    /* ── Header ── */
+    header {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      margin-bottom: 2.5rem;
+      padding-bottom: 1.5rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .header-left .eyebrow {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--accent-cyan);
+      margin-bottom: 0.4rem;
+    }
+
+    h1 {
+      font-family: var(--font-mono);
+      font-size: 1.6rem;
+      font-weight: 700;
+      color: var(--text-primary);
+      letter-spacing: -0.01em;
+    }
+
+    .status-badge {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #22c55e;
+      box-shadow: 0 0 8px #22c55e;
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+
+    .last-update {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--text-dim);
+      margin-top: 4px;
+    }
+
+    /* ── KPI Cards ── */
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1rem;
+      margin-bottom: 2rem;
+    }
+
+    .kpi-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.5rem;
+      position: relative;
+      overflow: hidden;
+      transition: border-color 0.2s;
+    }
+
+    .kpi-card:hover {
+      border-color: var(--border-glow);
+    }
+
+    .kpi-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+    }
+
+    .kpi-card.temp::before  { background: linear-gradient(90deg, var(--accent-amber), transparent); }
+    .kpi-card.humi::before  { background: linear-gradient(90deg, var(--accent-cyan), transparent); }
+    .kpi-card.tmax::before  { background: linear-gradient(90deg, #f87171, transparent); }
+    .kpi-card.tmin::before  { background: linear-gradient(90deg, #818cf8, transparent); }
+
+    .kpi-label {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 0.75rem;
+    }
+
+    .kpi-value {
+      font-family: var(--font-mono);
+      font-size: 2.4rem;
+      font-weight: 700;
+      line-height: 1;
+      letter-spacing: -0.02em;
+    }
+
+    .kpi-card.temp  .kpi-value { color: var(--accent-amber); }
+    .kpi-card.humi  .kpi-value { color: var(--accent-cyan); }
+    .kpi-card.tmax  .kpi-value { color: #f87171; }
+    .kpi-card.tmin  .kpi-value { color: #818cf8; }
+
+    .kpi-unit {
+      font-size: 1rem;
+      font-weight: 400;
+      opacity: 0.6;
+      margin-left: 2px;
+    }
+
+    .kpi-delta {
+      margin-top: 0.6rem;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    .kpi-delta .up   { color: #f87171; }
+    .kpi-delta .down { color: #34d399; }
+
+    /* ── Chart panels ── */
+    .charts-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+    }
+
+    @media (max-width: 760px) {
+      .charts-grid { grid-template-columns: 1fr; }
+    }
+
+    .chart-panel {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.25rem 1.25rem 0.5rem;
+    }
+
+    .chart-panel-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1rem;
+    }
+
+    .chart-title {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+    }
+
+    .chart-range-badge {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      color: var(--text-dim);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 2px 8px;
+    }
+
+    .plotly-chart {
+      width: 100%;
+      height: 260px;
+    }
+
+    /* ── Footer ── */
+    footer {
+      margin-top: 3rem;
+      padding-top: 1.5rem;
+      border-top: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--text-dim);
+    }
+  </style>
+</head>
+<body>
+<div class="wrapper">
+
+  <!-- Header -->
+  <header>
+    <div class="header-left">
+      <p class="eyebrow">Weather Report System</p>
+      <h1>{{ node_name|default:"Node Ulises" }}</h1>
+      <p class="last-update">Last reading: {{ last_reading_time|default:"—" }}</p>
+    </div>
+    <div style="text-align: right;">
+      <div class="status-badge" style="justify-content: flex-end;">
+        <span class="status-dot"></span>
+        <span>Online</span>
+      </div>
+      <p class="last-update" style="margin-top: 6px;">{{ node_location|default:"Location unknown" }}</p>
+    </div>
+  </header>
+
+  <!-- KPI Cards -->
+  <section class="kpi-grid">
+
+    <div class="kpi-card temp">
+      <p class="kpi-label">Temperature</p>
+      <div class="kpi-value">
+        {{ current_temp|default:"—" }}<span class="kpi-unit">°C</span>
+      </div>
+    </div>
+
+    <div class="kpi-card humi">
+      <p class="kpi-label">Humidity</p>
+      <div class="kpi-value">
+        {{ current_humi|default:"—" }}<span class="kpi-unit">%</span>
+      </div>
+    </div>
+
+    <div class="kpi-card tmax">
+      <p class="kpi-label">Max temp (24 h)</p>
+      <div class="kpi-value">
+        {{ temp_max_24h|default:"—" }}<span class="kpi-unit">°C</span>
+      </div>
+    </div>
+
+    <div class="kpi-card tmin">
+      <p class="kpi-label">Min temp (24 h)</p>
+      <div class="kpi-value">
+        {{ temp_min_24h|default:"—" }}<span class="kpi-unit">°C</span>
+      </div>
+    </div>
+
+  </section>
+
+  <!-- Charts -->
+  <section class="charts-grid">
+
+    <!-- Temperature 24h chart -->
+    <div class="chart-panel">
+      <div class="chart-panel-header">
+        <span class="chart-title">Temperature (last 24h)</span>
+      </div>
+      <div id="chart-temp-24h" class="plotly-chart"></div>
+    </div>
+
+    <!-- Humidity 24h chart -->
+    <div class="chart-panel">
+      <div class="chart-panel-header">
+        <span class="chart-title">Humidity (last 24h)</span>
+      </div>
+      <div id="chart-humi-24h" class="plotly-chart"></div>
+    </div>
+
+    <!-- Temperature weekly chart -->
+    <div class="chart-panel">
+      <div class="chart-panel-header">
+        <span class="chart-title">Temperature (last week)</span>
+      </div>
+      <div id="chart-temp-weekly" class="plotly-chart"></div>
+    </div>
+
+    <!-- Humidity weekly chart -->
+    <div class="chart-panel">
+      <div class="chart-panel-header">
+        <span class="chart-title">Humidity (last week)</span>
+      </div>
+      <div id="chart-humi-weekly" class="plotly-chart"></div>
+    </div>
+
+  </section>
+
+  <footer>
+    <span>{{ node_name|default:"Node Ulises" }} · {{ node_id|default:"ID unknown" }}</span>
+    <span>Readings every {{ reading_interval|default:"hour" }} </span>
+  </footer>
+
+</div>
+
+{{ temp_chart_24h_json|json_script:"temp-chart-24h-data" }}
+{{ humi_chart_24h_json|json_script:"humi-chart-24h-data" }}
+{{ temp_chart_weekly_json|json_script:"temp-chart-weekly-data" }}
+{{ humi_chart_weekly_json|json_script:"humi-chart-weekly-data" }}
+
+<script>
+  const config = { displayModeBar: false, responsive: true };
+
+  const tempChart24h = JSON.parse(JSON.parse(document.getElementById('temp-chart-24h-data').textContent));
+  // console.log(tempChart24h);
+  Plotly.react('chart-temp-24h', tempChart24h.data, tempChart24h.layout, config);
+  
+  const humiChart24h = JSON.parse(JSON.parse(document.getElementById('humi-chart-24h-data').textContent));
+  // console.log(humiChart24h);
+  Plotly.react('chart-humi-24h', humiChart24h.data, humiChart24h.layout, config);
+  
+  const tempChartWeekly = JSON.parse(JSON.parse(document.getElementById('temp-chart-weekly-data').textContent));
+  // console.log(tempChartWeekly);
+  Plotly.react('chart-temp-weekly', tempChartWeekly.data, tempChartWeekly.layout, config);
+  
+  const humiChartWeekly = JSON.parse(JSON.parse(document.getElementById('humi-chart-weekly-data').textContent));
+  // console.log(humiChartWeekly);
+  Plotly.react('chart-humi-weekly', humiChartWeekly.data, humiChartWeekly.layout, config);
+
+  // Force Plotly to recalculate dimensions once the page is fully laid out
+  window.addEventListener('load', () => {
+    Plotly.Plots.resize(document.getElementById('chart-temp-24h'));
+    Plotly.Plots.resize(document.getElementById('chart-humi-24h'));
+    Plotly.Plots.resize(document.getElementById('chart-temp-weekly'));
+    Plotly.Plots.resize(document.getElementById('chart-humi-weekly'));
+  });
+</script>
+
+</body>
+</html>
