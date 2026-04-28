@@ -38,13 +38,16 @@ def main_page(request: HttpRequest):
             #     stats_weekly[i]["day"] = stats_weekly[i]["day"].strftime("%d-%m-%Y")
                 
 
-            readings_last_24h = readings.filter(timestamp__gte=now - datetime.timedelta(hours=48))
+            readings_last_24h = readings.filter(timestamp__gte=now - datetime.timedelta(hours=24))
+            last_24h_by_temp = readings_last_24h.order_by("-temperature")
+            max_ts = last_24h_by_temp.first().timestamp - datetime.timedelta(hours=4)
+            min_ts = last_24h_by_temp.last().timestamp - datetime.timedelta(hours=4)
             stats_24h = readings_last_24h.values("timestamp", "temperature", "humidity")
             # for i in range(len(stats_24h)):
             #     stats_24h[i]["timestamp"] = stats_24h[i]["timestamp"].strftime("%H:00")
 
             # Get plots for weekly and 24h
-            timestamps_24h = [i["timestamp"] for i in stats_24h]
+            timestamps_24h = [i["timestamp"]-datetime.timedelta(hours=4) for i in stats_24h]
             temp_24h = [i["temperature"] for i in stats_24h]
             humi_24h = [i["humidity"] for i in stats_24h]
             
@@ -53,7 +56,6 @@ def main_page(request: HttpRequest):
             temp_min = [i["temp_min"] for i in stats_weekly]
             humi_max = [i["humi_max"] for i in stats_weekly]
             humi_min = [i["humi_min"] for i in stats_weekly]
-
 
             temp_chart_24h = temperature_24h_chart(data=[temp_24h], timestamps=timestamps_24h)
             humi_chart_24h = humidity_24h_chart(data=[humi_24h], timestamps=timestamps_24h)
@@ -65,16 +67,18 @@ def main_page(request: HttpRequest):
                                 "node_name": "Ulises 1",
                                 "node_location": "Patio",
                                 "node_id": "SN-0001",
-                                "last_reading_time": readings_last_24h.last().timestamp.strftime("%d-%m-%Y %H:%M"),
+                                "last_reading_time": (readings_last_24h.last().timestamp-datetime.timedelta(hours=4)).strftime("%d-%m-%Y %H:%M"),
                                 "current_temp": round(temp_24h[-1], 1),
                                 "current_humi": round(humi_24h[-1], 1),
                                 "temp_max_24h": round(max(temp_24h), 1),
                                 "temp_min_24h": round(min(temp_24h), 1),
+                                "temp_max_time": max_ts.strftime("%H:%M"),
+                                "temp_min_time": min_ts.strftime("%H:%M"),
                                 "temp_chart_24h_json": temp_chart_24h,
                                 "temp_chart_weekly_json": temp_chart_weekly,
                                 "humi_chart_24h_json": humi_chart_24h,
                                 "humi_chart_weekly_json": humi_chart_weekly,
-                                "reading_interval": "1 hour",
+                                "reading_interval": "20 min",
                             }
             )
         

@@ -293,13 +293,15 @@
       <div class="kpi-value">
         {{ temp_max_24h|default:"—" }}<span class="kpi-unit">°C</span>
       </div>
+      <p class="kpi-delta" style="color: var(--text-dim);">at {{ temp_max_time|default:"—" }}</p>
     </div>
-
+    
     <div class="kpi-card tmin">
       <p class="kpi-label">Min temp (24 h)</p>
       <div class="kpi-value">
         {{ temp_min_24h|default:"—" }}<span class="kpi-unit">°C</span>
       </div>
+      <p class="kpi-delta" style="color: var(--text-dim);">at {{ temp_min_time|default:"—" }}</p>
     </div>
 
   </section>
